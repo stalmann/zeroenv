@@ -3,9 +3,9 @@ version: '3'
 services:
   auth:
     build: './auth'
-  billing:
+  api:
     build: './api'
-  contact:
+  ops:
     build: './ops'
-  user:
+  batch:
     build: './batch'
