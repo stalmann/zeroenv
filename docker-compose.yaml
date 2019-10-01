@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  auth:
+    build: './auth'
+  billing:
+    build: './api'
+  contact:
+    build: './ops'
+  user:
+    build: './batch'
