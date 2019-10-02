@@ -5,7 +5,7 @@ services:
     build: './auth'
   api:
     build: './api'
-  ops:
-    build: './ops'
-  batch:
-    build: './batch'
+#  ops:
+#    build: './ops'
+#  batch:
+#    build: './batch'
