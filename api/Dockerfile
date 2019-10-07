@@ -1,19 +1,14 @@
-FROM node:10
-WORKDIR /zeroapi
-
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-# where available (npm@5+)
-
-COPY package*.json ./
-
-RUN npm install
-# If you are building your code for production
-# RUN npm ci --only=production
-
-# Bundle app source
-COPY . .
+# Extend vert.x image
+FROM vertx/vertx3
 
 EXPOSE 8080
 
-CMD [ "node", "api.js" ]
+# Copy your verticle to the container 
+COPY ./zeroapi.jar  /zeroapi/
+COPY ./zeroapi.json  /zeroapi/
+COPY ./tls/  /zeroapi/tls/
+
+# Launch the verticle
+WORKDIR /zeroapi
+ENTRYPOINT ["sh", "-c"]
+CMD ["exec vertx run zeroenv.Api -cp /zeroapi/zeroapi.jar"]
