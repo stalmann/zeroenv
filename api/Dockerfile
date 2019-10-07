@@ -1,14 +1,21 @@
-# Extend vert.x image
-FROM vertx/vertx3
+FROM openjdk:8-jre-alpine    
+
+ENV VERTICLE_FILE zeroapi.jar
+
+# Set the location of the verticles
+ENV VERTICLE_HOME /usr/verticles
 
 EXPOSE 8080
 
-# Copy your verticle to the container 
-COPY ./zeroapi.jar  /zeroapi/
-COPY ./zeroapi.json  /zeroapi/
-COPY ./tls/  /zeroapi/tls/
+# Copy your fat jar to the container
+COPY $VERTICLE_FILE $VERTICLE_HOME/ 
+
+COPY ./zeroapi.jar  $VERTICLE_HOME/
+COPY ./zeroapi.json  $VERTICLE_HOME/
+COPY ./tls/  $VERTICLE_HOME/tls/
+
 
 # Launch the verticle
-WORKDIR /zeroapi
+WORKDIR $VERTICLE_HOME
 ENTRYPOINT ["sh", "-c"]
-CMD ["exec vertx run zeroenv.Api -cp /zeroapi/zeroapi.jar"]
+CMD ["exec java -jar $VERTICLE_FILE"]     

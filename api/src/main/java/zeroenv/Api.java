@@ -110,7 +110,7 @@ public class Api extends AbstractVerticle {
                 mqConnection = MQConnection.connect(config.getString("mquri"));
                 System.out.println("connected");
             } catch (Exception e) {
-                System.out.println(e.getCause());
+                System.out.println("failed: " + e.toString());
 
             }
         }
