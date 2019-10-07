@@ -1,0 +1,13 @@
+{
+  "name": "zero",
+  "host": "localhost",
+  "port": 8080,
+  "ssl": false,
+  "uploadlocation": "upload",
+  "mquri": "amqp://guest:guest@localhost:5672/zero",
+  "requestqueue" : "requestqueue",
+  "responsequeue" : "requestqueue",
+  "downloadlocation": "download",
+  "certfoldername": "tls"
+  
+}
