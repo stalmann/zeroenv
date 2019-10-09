@@ -1,0 +1,22 @@
+version: "3.3"
+
+services:
+  rabbitmq:
+    hostname: rabbithost
+    build:
+      context: .
+    image: zerobatch:latest
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_VHOST: zero
+    ports:
+      - "5672:5672" 
+      - "5673:5673" 
+      - "15672:15672"
+    volumes:
+      - rabbitmq.data:/var/lib/rabbitmq
+      - ./definitions.json:/opt/definitions.json
+volumes:
+  rabbitmq.data:
+  

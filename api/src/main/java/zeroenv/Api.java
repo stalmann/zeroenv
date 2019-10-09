@@ -102,7 +102,7 @@ public class Api extends AbstractVerticle {
         int counter = 0;
         while (mqConnection == null || !mqConnection.isOpen()) {
             try {
-                Thread.sleep(100 * counter++);
+                Thread.sleep(a100 * counter++);
             } catch (Exception e) {
             }
             System.out.println("creating new mq connection");
@@ -111,7 +111,6 @@ public class Api extends AbstractVerticle {
                 System.out.println("connected");
             } catch (Exception e) {
                 System.out.println("failed: " + e.toString());
-
             }
         }
     }
