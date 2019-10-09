@@ -1,13 +1,18 @@
 ---
-- hosts: keycloak.custom
+- hosts: localhost
   tasks:
     - name: Configure it
       keycloak_client:
         auth_client_id: admin-cli
+        admin_url: http://localhost:9990/auth
+
         auth_keycloak_url: http://localhost:8080/auth
         auth_realm: master
         auth_username: admin
         auth_password: admin
         client_id: test
-        realm: test
+        enabled: true
+        name: test
+        realm: master
         state: present
+#      delegate_to: keycloak.custom
