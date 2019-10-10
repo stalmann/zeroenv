@@ -5,3 +5,5 @@
       name: authservers
   - include_role:
       name: apiservers
+  - include_role:
+      name: batchservers
