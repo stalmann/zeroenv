@@ -3,7 +3,6 @@
   wait_for:
     connect_timeout: 1
     port: 8080
-    search_regex: "Welcome to Keycloak"
   delegate_to: keycloak_custom
 
 - name: Add test client

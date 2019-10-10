@@ -3,3 +3,5 @@
   tasks:
   - include_role:
       name: authservers
+  - include_role:
+      name: apiservers

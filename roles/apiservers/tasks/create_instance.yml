@@ -1,0 +1,7 @@
+---
+- docker_image:
+    build:
+      path: api
+      pull: yes
+    name: dtac/zeroapi:latest
+    source: build
