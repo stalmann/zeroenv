@@ -1,0 +1,8 @@
+---
+- docker_container:
+    name: batchserver
+    image: dtac/batchserver:latest
+    published_ports:
+      - 15671:15671
+      - 15672:15672
+  register: reg_batchserver

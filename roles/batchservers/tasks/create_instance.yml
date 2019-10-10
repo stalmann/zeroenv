@@ -1,0 +1,7 @@
+---
+- docker_image:
+    build:
+      path: batch
+      pull: yes
+    name: dtac/batchserver:latest
+    source: build
