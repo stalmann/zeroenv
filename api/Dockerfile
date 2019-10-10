@@ -1,21 +1,19 @@
-FROM openjdk:8-jre-alpine    
+FROM node:10
+WORKDIR /zeroapi
+MAINTAINER kai@stalmann.org
+# Install app dependencies
+# A wildcard is used to ensure both package.json AND package-lock.json are copied
+# where available (npm@5+)
 
-ENV VERTICLE_FILE zeroapi.jar
+COPY package*.json ./
 
-# Set the location of the verticles
-ENV VERTICLE_HOME /usr/verticles
+RUN npm install
+# If you are building your code for production
+# RUN npm ci --only=production
+
+# Bundle app source
+COPY . .
 
 EXPOSE 8080
 
-# Copy your fat jar to the container
-COPY $VERTICLE_FILE $VERTICLE_HOME/ 
-
-COPY ./zeroapi.jar  $VERTICLE_HOME/
-COPY ./zeroapi.json  $VERTICLE_HOME/
-COPY ./tls/  $VERTICLE_HOME/tls/
-
-
-# Launch the verticle
-WORKDIR $VERTICLE_HOME
-ENTRYPOINT ["sh", "-c"]
-CMD ["exec java -jar $VERTICLE_FILE"]     
+CMD [ "node", "api.js" ]

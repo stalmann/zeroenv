@@ -1,0 +1,24 @@
+---
+- name: waiting for client to be up
+  wait_for:
+    connect_timeout: 1
+    port: 8080
+    search_regex: "Welcome to Keycloak"
+  delegate_to: keycloak_custom
+
+- name: Add test client
+  keycloak_client:
+    auth_client_id: admin-cli
+    admin_url: http://localhost:9990/auth
+
+    auth_keycloak_url: http://localhost:8080/auth
+    auth_realm: master
+    auth_username: admin
+    auth_password: admin
+    client_id: test
+    enabled: true
+    name: test
+    realm: master
+    state: present
+  when: "reg_keycloak_custom['ansible_facts']['docker_container']['State']['Running']"
+  delegate_to: keycloak_custom

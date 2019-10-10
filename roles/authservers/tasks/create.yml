@@ -1,0 +1,18 @@
+---
+- docker_image:
+    build:
+      path: auth
+      pull: yes
+    name: dtac/keycloak:latest
+    source: build
+
+- docker_container:
+    name: keycloak_custom
+    image: dtac/keycloak:latest
+    env:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+    published_ports:
+      - 8080:8080
+      - 8443:8443
+  register: reg_keycloak_custom
