@@ -58,7 +58,7 @@
   "bindings": [
     {
       "source": "amq.direct",
-      "vhost": "/",
+      "vhost": "zero",
       "destination": "requestqueue",
       "destination_type": "queue",
       "routing_key": "logstash",
@@ -66,7 +66,7 @@
     },
     {
       "source": "amq.direct",
-      "vhost": "/",
+      "vhost": "zero",
       "destination": "responsequeue",
       "destination_type": "queue",
       "routing_key": "v1",

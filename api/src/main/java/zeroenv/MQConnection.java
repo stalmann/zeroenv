@@ -1,5 +1,6 @@
 package zeroenv;
 
+import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 
@@ -42,6 +43,21 @@ public class MQConnection {
 
         } catch (Exception e) {
             throw new RuntimeException("MQ Connection failed, uri: " + amqpUri);
+        }
+    }
+
+    public static Channel createChannel(Connection mqConnection, String exchangeName, String queueName, String routingKey) {
+        try {
+
+            final Channel channel = mqConnection.createChannel();
+            channel.exchangeDeclare(exchangeName, "direct", true);
+            channel.queueDeclare(queueName, true, false, false, null);
+            channel.queueBind(queueName, exchangeName, routingKey);
+
+            return channel;
+
+        }catch(Exception e) {
+            throw new RuntimeException("Channel declareAndBindQueue failed." + e.getMessage());
         }
     }
 
