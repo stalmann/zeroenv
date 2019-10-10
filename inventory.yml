@@ -1,4 +1,9 @@
 all:
   hosts:
-    keycloak.custom:
-      ansible_connection: docker
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: "{{ansible_playbook_python}}"
+    keycloak_custom:
+    api:
+  vars:
+    ansible_connection: docker
