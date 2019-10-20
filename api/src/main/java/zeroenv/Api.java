@@ -1,7 +1,6 @@
 package zeroenv;
 
 
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -29,27 +28,22 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 public class Api extends AbstractVerticle {
 
-    private static final String KEY_OUTBOUNDROUTE = "outbound";
-    private static final String KEY_INBOUNDROUTE = "outbound";
+    private static final Logger logger = Logger.getLogger(Api.class.getName());
 
-    private static Connection mqConnection = null;
     private static JsonObject verticleConfig = null;
-
-    //amqp://userName:password@hostName:portNumber/virtualHost
-    //amqp://guest:guest@hostName:5672/
 
     private HttpServer http;
 
+    private Connection connection;
 
     public static void main(String[] args) throws Exception {
-
         JsonObject config = new JsonObject(new String(Files.readAllBytes(Paths.get("zeroapi.json"))));
         Vertx vertx = Vertx.vertx();
         vertx.deployVerticle(Api.class.getName(), new DeploymentOptions().setConfig(config));
-
     }
 
     @Override
@@ -61,13 +55,14 @@ public class Api extends AbstractVerticle {
         verticleConfig.put("certpath", certfolder.getAbsolutePath());
         certfolder.mkdirs();
 
-        System.out.println(verticleConfig.toString());
+        logger.info(verticleConfig.toString());
+        connection = MQConnection.getConnection(verticleConfig);
 
         http = vertx.createHttpServer(createOptions(vertx, verticleConfig)).requestHandler(createRouter(vertx));
 
         http.listen(verticleConfig.getInteger("port", 8080), result -> {
 
-            startMQConsumerService();
+            startMQConsumerService(connection);
 
             if (result.succeeded()) {
                 future.complete();
@@ -79,26 +74,17 @@ public class Api extends AbstractVerticle {
 
 
     private Router createRouter(Vertx vertx) {
+
         Router router = Router.router(vertx);
         // Enable multipart form data parsing
         router.post("/document").handler(BodyHandler.create()
                 .setUploadsDirectory(verticleConfig.getString("uploadlocation")));
 
         router.post("/document").handler(ctx -> {
-            verifyConnection(verticleConfig);
-            Channel channel = null;
-            try {
-                channel = mqConnection.createChannel();
-                channel.queueDeclare(verticleConfig.getString("requestqueue"), false, false, false, null);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            ctx.response().end(sendUploads(ctx, channel).encodePrettily());
+            ctx.response().end(sendUploads(ctx).encodePrettily());
         });
 
         router.route("/result/*").handler(StaticHandler.create(verticleConfig.getString("downloadlocation")));
-        //router.route().failureHandler(ErrorHandler.create(true));
-
         return router;
     }
 
@@ -107,56 +93,55 @@ public class Api extends AbstractVerticle {
 
         Map<String, String> message = new HashMap<String, String>();
 
-        try {
-
-            message.put("mimetype", fu.contentType());
-            message.put("filesize", fu.size() + "");
-            message.put("filename", fu.uploadedFileName());
-            message.put("charset", fu.charSet());
-            message.put("ops", new JsonArray().add(System.currentTimeMillis()).toString());
-
-        } catch (Exception e) {
-            message.put("error-mdread", e.toString());
-        }
+        message.put("mimetype", fu.contentType());
+        message.put("filesize", fu.size() + "");
+        message.put("filename", fu.uploadedFileName());
+        message.put("charset", fu.charSet());
+        message.put("ops", new JsonArray().add(System.currentTimeMillis()).toString());
 
         return message;
     }
 
 
-    private static void startMQConsumerService() {
+    private static void startMQConsumerService(Connection connection) {
 
+        final File downloads = new File(verticleConfig.getString("downloadlocation"));
+        logger.info("download to " + downloads.getAbsolutePath());
+
+        DeliverCallback deliverCallback = (consumerTag, delivery) -> {
+            logger.info("got " + new String(delivery.getBody()));
+            final JsonObject message = new JsonObject(new String(delivery.getBody(), "UTF-8"));
+            final JsonArray ops = new JsonArray(message.getString("ops"));
+
+            ops.add(System.currentTimeMillis());
+            message.put("ops", ops);
+
+            downloads.mkdirs();
+
+            final File target = new File(downloads, message.getString("messageId"));
+            final BufferedWriter writer = new BufferedWriter(new FileWriter(target));
+
+            writer.write(message.encodePrettily());
+            writer.close();
+        };
+        logger.info("StartING consumer ...");
         try {
-
-            DeliverCallback deliverCallback = (consumerTag, delivery) -> {
-
-                final JsonObject message = new JsonObject(new String(delivery.getBody(), "UTF-8"));
-                final JsonArray ops = new JsonArray(message.getString("ops"));
-
-                ops.add(System.currentTimeMillis());
-                message.put("ops", ops);
-
-                final File downloads = new File(verticleConfig.getString("downloadlocation"));
-
-                downloads.mkdirs();
-
-                final File target = new File(downloads, message.getString("messageId") + ".json");
-                final BufferedWriter writer = new BufferedWriter(new FileWriter(target));
-
-                writer.write(message.encodePrettily());
-                writer.close();
-            };
-            createChannel(KEY_OUTBOUNDROUTE).basicConsume(verticleConfig.getString("responsequeue", "responsequeue"), true, deliverCallback, consumerTag -> {
-            });
+            MQConnection.createDurableDirect(connection, "zeroexchange", "zq-out", "api-out")
+                    .basicConsume("zq-out", true, deliverCallback, consumerTag -> {
+                        //logger.info("Consume");
+                    });
         } catch (Exception e) {
-            System.out.println("OUTBOUND MQ Consumer failed." + e.getCause().getMessage());
+            throw new RuntimeException("OUTBOUND MQ Consumer failed.", e);
         }
     }
 
-    private JsonArray sendUploads(RoutingContext ctx, Channel channel) {
+    private JsonArray sendUploads(RoutingContext ctx) {
+        final Channel channel = MQConnection.createDurableDirect(connection, "zeroexchange", "zq-in", "api-in");
 
         final JsonArray results = new JsonArray();
 
         for (FileUpload f : ctx.fileUploads()) {
+            logger.info("uploading " + f.uploadedFileName());
 
             final String messageId = f.uploadedFileName().substring(verticleConfig.getString("uploadlocation").length() + 1);
             final Map<String, String> message = metadata(f);
@@ -165,14 +150,15 @@ public class Api extends AbstractVerticle {
             message.put("document", vertx.fileSystem().readFileBlocking(f.uploadedFileName()).toString(Charset.forName("utf-8")));
 
             try {
-
-                channel.basicPublish("", verticleConfig.getString("requestqueue"), null, new GsonBuilder().create().toJson(message).getBytes("UTF-8"));
+                String json = new GsonBuilder().create().toJson(message);
+                logger.info("sending " + json.length() + "bytes");
+                channel.basicPublish("zeroexchange", "ze-ingest", null, json.getBytes("UTF-8"));
                 results.add(messageId);
 
+                logger.info("done: " + messageId);
                 vertx.fileSystem().deleteBlocking(f.uploadedFileName());
-
             } catch (Exception e) {
-                System.out.println("sendUploads failed: " + e.getCause().getMessage() + "\n" + new GsonBuilder().create().toJson(message));
+                throw new RuntimeException("sendUploads failed: " + new GsonBuilder().create().toJson(message), e);
             }
         }
         return results;
@@ -188,34 +174,6 @@ public class Api extends AbstractVerticle {
                     .setUseAlpn(false);
 
         return serverOptions;
-    }
-
-
-    private static void verifyConnection(JsonObject config) {
-
-        int counter = 0;
-        String cause = "";
-        while (mqConnection == null || !mqConnection.isOpen()) {
-            if (counter == 4)
-                throw new RuntimeException("RabbitMQ not available: " + cause);
-            try {
-                Thread.sleep(300 * counter++);
-            } catch (Exception e) {
-            }
-            System.out.println("Creating new mq connection.");
-            try {
-                mqConnection = MQConnection.connect(config.getString("mquri"));
-                System.out.println("Connected.");
-            } catch (Exception e) {
-                cause = e.getCause().getMessage();
-                System.out.println("MQ not connected.");
-            }
-        }
-    }
-
-    private static Channel createChannel(String routingKey) {
-        verifyConnection(verticleConfig);
-        return MQConnection.createChannel(mqConnection, "zeroexchange", "zeroqueue", routingKey);
     }
 
 

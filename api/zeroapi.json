@@ -4,10 +4,7 @@
   "port": 8080,
   "ssl": false,
   "uploadlocation": "upload",
-  "mquri": "amqp://guest:guest@localhost:5672/zero",
-  "requestqueue" : "requestqueue",
-  "responsequeue" : "requestqueue",
+  "mquri": "amqp://guest:guest@localhost:5672/%2F",
   "downloadlocation": "download",
   "certfoldername": "tls"
-  
 }
