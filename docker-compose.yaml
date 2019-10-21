@@ -4,21 +4,43 @@ version: '3'
 services:
   auth:
 #    build: './auth'
-    image: jboss/keycloak:3.4.3.Final
+    image: jboss/keycloak:latest
     deploy:
       replicas: 1
     container_name: auth
     environment:
       - KEYCLOAK_USER=admin
       - KEYCLOAK_PASSWORD=admin
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak
+
     ports:
       - "8080:8080"
       - "8443:8443"
-#    networks:
-#      default:
-#        priority: 0
-#      keycloak-network:
-#        priority: 100
+    healthcheck:
+      test: "/bin/curl --fail -v http://localhost:8080/auth/"
+      interval: "15s"
+      retries: 1
+    depends_on:
+      - keycloak_pg
+    networks:
+      default:
+      keycloak-network:
+  keycloak_pg:
+    container_name: keycloak_pg
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=keycloak
+      - POSTGRES_PASSWORD=keycloak
+      - POSTGRES_DB=keycloak
+    networks:
+      keycloak-network:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   api:
     build: './api'
     ports:
@@ -31,12 +53,12 @@ services:
       - batch
     deploy:
       replicas: 1
-#    networks:
-#      - default
-#      - frontend
+    networks:
+      - default
     container_name: api
     depends_on:
       - auth
+      - batch
 #  ops:
 #    build: './ops'
   batch:
@@ -49,10 +71,12 @@ services:
       - "15672:15672"
     deploy:
       replicas: 1
-#    networks:
-#      - default
-#      - backend
-#networks:
-#  default:
-#  keycloak-network:
-#  frontend:
+    depends_on:
+      - auth
+    networks:
+      - default
+      - backend
+networks:
+  default:
+  keycloak-network:
+  backend:
