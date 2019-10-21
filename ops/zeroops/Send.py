@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 import pika
 busUrl = "amqp://guest:guest@localhost:5672/%2F"
-f=open("/Users/ks/Library/Mobile Documents/com~apple~CloudDocs/Projekte/zero/data/trump.json", "r")
+f=open("../../data/trump.json", "r")
 bodyJson =f.read()
 print(bodyJson)
 connection = pika.BlockingConnection(pika.URLParameters(busUrl))
-#connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 channel = connection.channel()
 
 channel.exchange_declare(exchange='zeroexchange', exchange_type='direct')
