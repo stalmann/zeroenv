@@ -70,7 +70,7 @@ services:
   ops:
     build: './ops'
     container_name: zeroops
-    restart: no
+    restart: "no"
   batch:
     build: './batch'
     container_name: batch
