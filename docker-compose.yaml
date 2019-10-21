@@ -1,11 +1,40 @@
 version: '3'
 
+
 services:
   auth:
     build: './auth'
+    deploy:
+      replicas: 1
+    container_name: auth
+    expose:
+      - "8080"
+      - "443"
+    ports:
+      - "8080:80"
+      - "8443:443"
   api:
     build: './api'
+    ports:
+      - "8081:8080"
+    expose:
+      - "8080"
+      - "443"
+    links:
+      - auth
+      - batch
+    deploy:
+      replicas: 1
+    container_name: api
+    depends_on:
+      - auth
 #  ops:
 #    build: './ops'
-#  batch:
-#    build: './batch'
+  batch:
+    build: './batch'
+    container_name: batch
+    links:
+      - auth
+    ports:
+      - "15671:15671"
+      - "15672:15672"
