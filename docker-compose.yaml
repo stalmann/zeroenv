@@ -1,4 +1,4 @@
-version: '3'
+version: '3.7'
 
 
 services:
@@ -9,11 +9,11 @@ services:
       replicas: 1
     container_name: auth
     environment:
-      - KEYCLOAK_USER=admin
-      - KEYCLOAK_PASSWORD=admin
+      - KEYCLOAK_USER_FILE=/run/secrets/keycloak_user_secret
+      - KEYCLOAK_PASSWORD_FILE=/run/secrets/keycloak_pass_secret
       - POSTGRES_DB=keycloak
-      - POSTGRES_USER=keycloak
-      - POSTGRES_PASSWORD=keycloak
+      - POSTGRES_USER_FILE=/run/secrets/pgsql_user_secret
+      - POSTGRES_PASSWORD_FILE=/run/secrets/pgsql_pass_secret
 
     ports:
       - "8080:8080"
@@ -27,12 +27,17 @@ services:
     networks:
       default:
       keycloak-network:
+    secrets:
+      - pgsql_user_secret
+      - pgsql_pass_secret
+      - keycloak_user_secret
+      - keycloak_pass_secret
   keycloak_pg:
     container_name: keycloak_pg
     image: postgres:latest
     environment:
-      - POSTGRES_USER=keycloak
-      - POSTGRES_PASSWORD=keycloak
+      - POSTGRES_USER_FILE=/run/secrets/pgsql_user_secret
+      - POSTGRES_PASSWORD_FILE=/run/secrets/pgsql_user_secret
       - POSTGRES_DB=keycloak
     networks:
       keycloak-network:
@@ -41,6 +46,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    secrets:
+      - pgsql_user_secret
+      - pgsql_pass_secret
   api:
     build: './api'
     ports:
@@ -80,3 +88,13 @@ networks:
   default:
   keycloak-network:
   backend:
+
+secrets:
+  pgsql_user_secret:
+    file: "./secrets/postgres_keycloakdb_user_secret.txt"
+  pgsql_pass_secret:
+    file: "./secrets/postgres_keycloakdb_pass_secret.txt"
+  keycloak_user_secret:
+    file: "./secrets/keycloak_admin_user_secret.txt"
+  keycloak_pass_secret:
+    file: "./secrets/keycloak_admin_pass_secret.txt"
