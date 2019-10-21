@@ -67,8 +67,10 @@ services:
     depends_on:
       - auth
       - batch
-#  ops:
-#    build: './ops'
+  ops:
+    build: './ops'
+    container_name: zeroops
+    restart: "no"
   batch:
     build: './batch'
     container_name: batch
