@@ -1,11 +1,102 @@
-version: '3'
+version: '3.7'
+
 
 services:
   auth:
-    build: './auth'
+#    build: './auth'
+    image: jboss/keycloak:latest
+    deploy:
+      replicas: 1
+    container_name: auth
+    environment:
+      - KEYCLOAK_USER_FILE=/run/secrets/keycloak_user_secret
+      - KEYCLOAK_PASSWORD_FILE=/run/secrets/keycloak_pass_secret
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER_FILE=/run/secrets/pgsql_user_secret
+      - POSTGRES_PASSWORD_FILE=/run/secrets/pgsql_pass_secret
+
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    healthcheck:
+      test: "/bin/curl --fail -v http://localhost:8080/auth/"
+      interval: "15s"
+      retries: 1
+    depends_on:
+      - keycloak_pg
+    networks:
+      default:
+      keycloak-network:
+    secrets:
+      - pgsql_user_secret
+      - pgsql_pass_secret
+      - keycloak_user_secret
+      - keycloak_pass_secret
+  keycloak_pg:
+    container_name: keycloak_pg
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER_FILE=/run/secrets/pgsql_user_secret
+      - POSTGRES_PASSWORD_FILE=/run/secrets/pgsql_user_secret
+      - POSTGRES_DB=keycloak
+    networks:
+      keycloak-network:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    secrets:
+      - pgsql_user_secret
+      - pgsql_pass_secret
   api:
     build: './api'
-#  ops:
-#    build: './ops'
-#  batch:
-#    build: './batch'
+    ports:
+      - "8081:8080"
+    expose:
+      - "8080"
+      - "443"
+    links:
+      - auth
+      - batch
+    deploy:
+      replicas: 1
+    networks:
+      - default
+    container_name: api
+    depends_on:
+      - auth
+      - batch
+  ops:
+    build: './ops'
+    container_name: zeroops
+    restart: "no"
+  batch:
+    build: './batch'
+    container_name: batch
+    links:
+      - auth
+    ports:
+      - "15671:15671"
+      - "15672:15672"
+    deploy:
+      replicas: 1
+    depends_on:
+      - auth
+    networks:
+      - default
+      - backend
+networks:
+  default:
+  keycloak-network:
+  backend:
+
+secrets:
+  pgsql_user_secret:
+    file: "./secrets/postgres_keycloakdb_user_secret.txt"
+  pgsql_pass_secret:
+    file: "./secrets/postgres_keycloakdb_pass_secret.txt"
+  keycloak_user_secret:
+    file: "./secrets/keycloak_admin_user_secret.txt"
+  keycloak_pass_secret:
+    file: "./secrets/keycloak_admin_pass_secret.txt"
