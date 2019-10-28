@@ -1,7 +1,7 @@
 import pika
 
 
-from SpacyOperation import processDocument
+from zeroops.LocalOperatorChainSpacy import processDocument
 
 busUrl = "amqp://guest:guest@localhost:5672/%2F"
 
